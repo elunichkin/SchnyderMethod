@@ -83,6 +83,73 @@ def triangulate(G, ce):
     return added_edges
 
 
+def schnyder_labeling(G, ce, ef):
+    def intersect(l1, l2):
+        return list(set(l1) & set(l2))
+
+    def subtract(l1, l2, l3 = []):
+        return [x for x in l1 if x not in (l2 + l3)]
+
+    v = sorted([ef[0][0], ef[1][0], ef[2][0]])
+    ce_cnt = {}
+
+    for u in list(G.nodes()):
+        ce_cnt[u] = 0
+    for u in ce[v[0]]:
+        ce_cnt[u] = len(intersect(ce[v[0]], ce[u]))
+
+    to_strip = []
+    strip = []
+
+    for u in ce[v[0]]:
+        if u not in v and ce_cnt[u] == 2:
+            to_strip.append(u)
+
+    ce_v0 = ce[v[0]]
+
+    while G.number_of_nodes() > 3:
+        if len(to_strip) == 0:
+            break
+        u = to_strip.pop()
+
+        strip.append((u, ce[u], subtract(ce[u], ce_v0, [v[0]])))
+        G.remove_node(u)
+        ce_v0 = subtract(ce_v0, [u])
+
+        for w in subtract(ce[u], ce_v0, [v[0]]):
+            G.add_edge(v[0], w)
+
+        if G.number_of_nodes() == 3:
+            break
+
+        ce_v0 += subtract(ce[u], [v[0]])
+        to_strip = []
+
+        for w in ce[v[0]]:
+            if len(intersect(ce_v0, ce[w])) == 2 and w not in v:
+                to_strip.append(w)
+
+    labels = {v[0]: {(v[0], v[1]): 3},
+              v[1]: {(v[0], v[2]): 2},
+              v[2]: {(v[1], v[2]): 1}}
+
+    while len(strip) > 0:
+        u, new_ce, old_ce = strip.pop()
+        labels[u] = {}
+
+        for w in old_ce:
+            G.remove_edge(v[0], w)
+
+        if len(old_ce) == 0:
+            w = sorted(new_ce)
+
+            labels[u] = {(w[0], w[1]): labels[w[2]].pop((w[0], w[2])),
+                         (w[0], w[2]): labels[w[1]].pop((w[0], w[2])),
+                         (w[1], w[2]): labels[w[0]].pop((w[0], w[1]))}
+
+            labels[w[0]][tuple(sorted([w[1], u]))] = labels[u][(w[0], w[1])]
+
+
 print('Enter two numbers V and E: number of vertices and edges in G, then edges (u, v) of G, 2 numbers at a line:')
 
 """
@@ -111,6 +178,4 @@ tr = triangulate(G, ce)
 
 ce = nx.PlanarEmbedding.get_data(nx.check_planarity(G)[1])
 faces = find_faces(G, ce)
-
-print(tr)
-print(faces)
+lbl = schnyder_labeling(G, ce, faces[0])
