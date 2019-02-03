@@ -9,9 +9,15 @@ class TreeNode:
         if child not in self.children:
             self.children.append(child)
             child.parent = self
+            child.update_depth(self.depth)
 
     def get_subtree_size(self):
         size = 1
         for child in self.children:
             size += child.get_subtree_size()
         return size
+
+    def update_depth(self, depth):
+        self.depth = depth + 1
+        for child in self.children:
+            child.update_depth(self.depth)

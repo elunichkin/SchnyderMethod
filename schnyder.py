@@ -178,18 +178,18 @@ def calc_coordinates(G, tree_nodes, ef):
         if u in [tr.label for tr in t]:
             continue
 
-        r = [0, 0, 0]
+        n = [0, 0, 0]
         for i in range(3):
             for tn in [(i + 1) % 3, (i - 1) % 3]:
                 node = tree_nodes[u][tn]
                 while node is not None:
-                    r[i] += tree_nodes[node.label][i].get_subtree_size()
+                    n[i] += tree_nodes[node.label][i].get_subtree_size()
                     node = node.parent
 
-            r[i] -= tree_nodes[u][i].get_subtree_size()
-            r[i] -= tree_nodes[u][(i-1)%3].depth
+            n[i] -= tree_nodes[u][i].get_subtree_size()
+            n[i] -= tree_nodes[u][(i-1)%3].depth
 
-        coordinates[u] = r[:-1]
+        coordinates[u] = (n[0], n[1])
 
     return coordinates
 
@@ -219,3 +219,26 @@ def realizer(G, slbl):
                 i += 1
 
     return calc_coordinates(r, tree_nodes, v)
+
+
+def draw(infile):
+    with open(infile, 'r') as inf:
+        V, E = [int(x) for x in inf.readline().split()]
+        e = []
+        for i in range(E):
+            e.append(tuple([int(x) for x in inf.readline().split()]))
+
+        G = nx.Graph()
+        G.add_edges_from(e)
+        G_old = G.copy()
+
+        ce = nx.PlanarEmbedding.get_data(nx.check_planarity(G)[1])
+        tr = triangulate(G, ce)
+        G_tr = G.copy()
+
+        ce = nx.PlanarEmbedding.get_data(nx.check_planarity(G)[1])
+        faces = find_faces(G, ce)
+        lbl = schnyder_labeling(G, ce, faces[0])
+        r = realizer(G_tr, lbl)
+
+        return G_old, r
